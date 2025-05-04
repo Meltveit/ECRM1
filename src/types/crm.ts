@@ -11,7 +11,8 @@ export interface BaseDoc {
 }
 
 export interface TeamUser extends BaseDoc {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   role: 'admin' | 'member'; // Example roles
 }

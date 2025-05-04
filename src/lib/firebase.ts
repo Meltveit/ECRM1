@@ -1,6 +1,11 @@
+// src/lib/firebase.ts - Update to ensure proper configuration
+
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getFirestore, Firestore } from "firebase/firestore";
-// import { getAuth } from "firebase/auth"; // Import if using Firebase Auth
+import { getAuth, Auth } from "firebase/auth"; // Add Auth import
+
+// Check if we're in the browser
+const isBrowser = typeof window !== 'undefined';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,16 +18,17 @@ const firebaseConfig = {
 
 let app: FirebaseApp;
 let db: Firestore;
-// let auth; // Declare auth if using Firebase Auth
+let auth: Auth;
 
-// Initialize Firebase only if it hasn't been initialized yet
-if (!getApps().length) {
+// Initialize Firebase only if it hasn't been initialized yet and we're in browser
+if (isBrowser && !getApps().length) {
   app = initializeApp(firebaseConfig);
-} else {
+  db = getFirestore(app);
+  auth = getAuth(app);
+} else if (isBrowser) {
   app = getApps()[0];
+  db = getFirestore(app);
+  auth = getAuth(app);
 }
 
-db = getFirestore(app);
-// auth = getAuth(app); // Initialize auth if using Firebase Auth
-
-export { app, db /*, auth */ };
+export { app, db, auth };

@@ -1,9 +1,21 @@
+// src/components/main-layout.tsx
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Briefcase, Target, Phone, Settings, ActivitySquare, Package } from 'lucide-react';
+import { 
+  Home, 
+  Users, 
+  Briefcase, 
+  Phone, 
+  ActivitySquare, 
+  Package,
+  LogOut,
+  Settings,
+  User as UserIcon 
+} from 'lucide-react';
 
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Sidebar,
   SidebarContent,
@@ -13,27 +25,45 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
+  SidebarFooter
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const menuItems = [
-  { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/users', label: 'Team Users', icon: Users },
   { href: '/clients', label: 'Clients', icon: Briefcase },
   { href: '/contacts', label: 'Contacts', icon: Phone },
   { href: '/activities', label: 'Activities', icon: ActivitySquare },
   { href: '/subscriptions', label: 'Subscriptions', icon: Package },
-  // Add more items as needed
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, teamUser, signOut } = useAuth();
+
+  // Get user initials for avatar
+  const getInitials = () => {
+    if (teamUser?.firstName && teamUser?.lastName) {
+      return `${teamUser.firstName[0]}${teamUser.lastName[0]}`.toUpperCase();
+    }
+    return user?.email?.substring(0, 2).toUpperCase() || 'U';
+  };
 
   return (
     <div className="flex min-h-screen">
       <Sidebar collapsible="icon">
         <SidebarHeader className="p-4">
-           <Link href="/" className="flex items-center gap-2 font-semibold text-lg text-primary">
+           <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg text-primary">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                 <path d="M2 17l10 5 10-5"/>
@@ -48,7 +78,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
-                    isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
+                    isActive={pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard')}
                     tooltip={item.label}
                   >
                     <item.icon />
@@ -59,7 +89,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             ))}
           </SidebarMenu>
         </SidebarContent>
-        {/* SidebarFooter can be added here if needed */}
+        <SidebarFooter className="p-2">
+          <SidebarMenuItem>
+            <Link href="/settings" passHref legacyBehavior>
+              <SidebarMenuButton
+                isActive={pathname === '/settings'}
+                tooltip="Settings"
+              >
+                <Settings />
+                <span>Settings</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        </SidebarFooter>
       </Sidebar>
 
       <SidebarInset className="flex flex-col">
@@ -69,10 +111,38 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <SidebarTrigger className="md:hidden" />
           </div>
           <div className="flex items-center gap-4">
-            {/* Example User Menu */}
-            {/* <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-              <Users className="h-5 w-5" />
-            </Button> */}
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
