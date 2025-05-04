@@ -25,7 +25,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarTrigger,
-  SidebarFooter
+  SidebarFooter,
+  SidebarSeparator
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +39,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
+// Updated menu items to include profile
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/users', label: 'Team Users', icon: Users },
@@ -74,6 +76,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </SidebarHeader>
         <SidebarContent className="flex-1 p-2">
           <SidebarMenu>
+            {/* Main menu items */}
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref legacyBehavior>
@@ -87,6 +90,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 </Link>
               </SidebarMenuItem>
             ))}
+            
+            <SidebarSeparator className="my-2" />
+            
+            {/* Profile link */}
+            <SidebarMenuItem>
+              <Link href="/profile" passHref legacyBehavior>
+                <SidebarMenuButton
+                  isActive={pathname === '/profile'}
+                  tooltip="Profile"
+                >
+                  <UserIcon />
+                  <span>Profile</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-2">
@@ -101,17 +119,29 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
+          
+          {/* Sign out button */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={signOut}
+              tooltip="Sign Out"
+              variant="outline"
+            >
+              <LogOut />
+              <span>Sign Out</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarFooter>
       </Sidebar>
 
       <SidebarInset className="flex flex-col">
          <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 pt-2 pb-2">
-          {/* Header content, e.g., User menu, search bar */}
-          <div> {/* Placeholder for left content */}
+          {/* Header content */}
+          <div>
             <SidebarTrigger className="md:hidden" />
           </div>
           <div className="flex items-center gap-4">
-            {/* User Menu */}
+            {/* User Menu - Keep this for quick access from header */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 rounded-full">
@@ -146,7 +176,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          {children}
+          {/* Remove max-width constraint to allow full width */}
+          <div className="w-full">
+            {children}
+          </div>
         </main>
       </SidebarInset>
     </div>

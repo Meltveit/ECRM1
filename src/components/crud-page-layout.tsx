@@ -1,3 +1,4 @@
+// src/components/crud-page-layout.tsx
 "use client";
 
 import React, { useState } from 'react';
@@ -9,8 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -49,19 +48,13 @@ export function CrudPageLayout<TData>({
     // Data invalidation/refetching should be handled by the mutation hook used within FormComponent
   };
 
-  // Expose handleOpenDialog via children render prop if needed by DataTable actions
-   const childrenWithProps = React.Children.map(children, child => {
-    if (React.isValidElement(child) && typeof child.type !== 'string') {
-      // Clone element and add props - adjust based on how DataTable actions are implemented
-      // This example assumes DataTable might have an 'onEdit' prop
-      return React.cloneElement(child as React.ReactElement<any>, { onEdit: handleOpenDialog });
-    }
-    return child;
-  });
-
+  // Expose handleOpenDialog via window object for external access
+  if (typeof window !== 'undefined') {
+    (window as any).handleOpenEditDialog = handleOpenDialog;
+  }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">{title}</h1>
         <Button onClick={() => handleOpenDialog()} size="sm">
@@ -71,8 +64,7 @@ export function CrudPageLayout<TData>({
       </div>
 
       {/* Render DataTable or other main content */}
-      {childrenWithProps}
-
+      {children}
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -90,16 +82,6 @@ export function CrudPageLayout<TData>({
                     onCancel={handleCloseDialog}
                  />
            </ScrollArea>
-           {/* Footer is typically handled within the FormComponent now to include submit/cancel buttons */}
-            {/* <DialogFooter className="mt-auto pt-4 border-t">
-                <DialogClose asChild>
-                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancel
-                 </Button>
-                </DialogClose>
-                 {/* The Save button is likely part of the FormComponent now */}
-                {/* <Button type="submit" form="entity-form">Save</Button> */}
-            {/* </DialogFooter> */}
         </DialogContent>
       </Dialog>
     </div>

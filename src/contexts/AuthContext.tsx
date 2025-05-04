@@ -7,7 +7,7 @@ import {
   onAuthStateChanged, 
   signOut as firebaseSignOut 
 } from 'firebase/auth';
-import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 
 import { auth, db } from '@/lib/firebase';
@@ -43,12 +43,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Handle auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user?.email || "No user");
       setUser(user);
       
       if (user) {
         try {
           // Try to get teamId from localStorage first
           let currentTeamId = localStorage.getItem('currentTeamId');
+          console.log("Team ID from storage:", currentTeamId);
           
           // If not found in localStorage, find teams the user is a member of
           if (!currentTeamId) {
@@ -56,6 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (userTeams.length > 0) {
               currentTeamId = userTeams[0];
               localStorage.setItem('currentTeamId', currentTeamId);
+              console.log("Found team ID:", currentTeamId);
             }
           }
           
@@ -63,9 +66,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Get user details from the team
           if (currentTeamId) {
-            const userDoc = await getDoc(doc(db, `${TEAMS_COLLECTION}/${currentTeamId}/${TEAM_USERS_SUBCOLLECTION}/${user.uid}`));
+            const userDocRef = doc(db, `${TEAMS_COLLECTION}/${currentTeamId}/${TEAM_USERS_SUBCOLLECTION}/${user.uid}`);
+            const userDoc = await getDoc(userDocRef);
+            
             if (userDoc.exists()) {
+              // Update last login timestamp
+              await updateDoc(userDocRef, {
+                lastLogin: serverTimestamp()
+              });
+              
               setTeamUser({ id: userDoc.id, ...userDoc.data() } as TeamUser);
+              
+              // Redirect to dashboard if on login or register page
+              const authPages = ['/login', '/register'];
+              if (authPages.includes(pathname)) {
+                console.log("Redirecting to dashboard from auth page");
+                router.push('/dashboard');
+              }
             }
           }
         } catch (error) {
@@ -94,17 +111,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const findUserTeams = async (userId: string): Promise<string[]> => {
     const teamIds: string[] = [];
     
-    // Query all teams with subcollection containing the user
-    const teamsRef = collection(db, TEAMS_COLLECTION);
-    const teamsSnapshot = await getDocs(teamsRef);
-    
-    for (const teamDoc of teamsSnapshot.docs) {
-      const userRef = doc(db, `${TEAMS_COLLECTION}/${teamDoc.id}/${TEAM_USERS_SUBCOLLECTION}/${userId}`);
-      const userSnapshot = await getDoc(userRef);
+    try {
+      // Query all teams with subcollection containing the user
+      const teamsRef = collection(db, TEAMS_COLLECTION);
+      const teamsSnapshot = await getDocs(teamsRef);
       
-      if (userSnapshot.exists()) {
-        teamIds.push(teamDoc.id);
+      for (const teamDoc of teamsSnapshot.docs) {
+        const userRef = doc(db, `${TEAMS_COLLECTION}/${teamDoc.id}/${TEAM_USERS_SUBCOLLECTION}/${userId}`);
+        const userSnapshot = await getDoc(userRef);
+        
+        if (userSnapshot.exists()) {
+          teamIds.push(teamDoc.id);
+        }
       }
+    } catch (error) {
+      console.error("Error finding user teams:", error);
     }
     
     return teamIds;

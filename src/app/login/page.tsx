@@ -58,10 +58,8 @@ export default function LoginPage() {
         description: "You have been logged in successfully. Redirecting to dashboard...",
       });
       
-      // Redirect to dashboard
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      // Redirect immediately to dashboard (no setTimeout)
+      router.push('/dashboard');
       
     } catch (error: any) {
       let errorMessage = "Failed to log in";

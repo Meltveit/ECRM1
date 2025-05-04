@@ -18,9 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirestoreAddMutation, useFirestoreUpdateMutation } from '@/hooks/useFirestoreMutation';
 import type { Client } from '@/types/crm';
-import { MOCK_TEAM_ID } from '@/types/crm'; // Import mock team ID
-import { CLIENTS_SUBCOLLECTION } from '@/lib/constants';
+import { TEAMS_COLLECTION, CLIENTS_SUBCOLLECTION } from '@/lib/constants';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth hook
 
 // Define Zod schema for validation
 const clientFormSchema = z.object({
@@ -39,13 +39,14 @@ interface ClientFormProps {
   onCancel: () => void;
 }
 
-// Define the query key for clients
-const clientsQueryKey = ['teams', MOCK_TEAM_ID, CLIENTS_SUBCOLLECTION];
-const collectionPath = `${TEAMS_COLLECTION}/${MOCK_TEAM_ID}/${CLIENTS_SUBCOLLECTION}`;
-
 export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
   const { toast } = useToast();
+  const { teamId } = useAuth(); // Get the actual team ID from auth context
   const isEditMode = !!data;
+
+  // Define the query key for clients - using the actual team ID
+  const clientsQueryKey = teamId ? ['teams', teamId, CLIENTS_SUBCOLLECTION] : null;
+  const collectionPath = teamId ? `${TEAMS_COLLECTION}/${teamId}/${CLIENTS_SUBCOLLECTION}` : '';
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -59,23 +60,32 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
     },
   });
 
-   // Reset form when `data` changes (e.g., when opening the dialog for add/edit)
-   useEffect(() => {
+  // Reset form when `data` changes (e.g., when opening the dialog for add/edit)
+  useEffect(() => {
     form.reset({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-        description: '',
-        ...data, // Use new data or defaults
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      description: '',
+      ...data, // Use new data or defaults
     });
-    }, [data, form]);
-
+  }, [data, form]);
 
   const addMutation = useFirestoreAddMutation<Client>();
   const updateMutation = useFirestoreUpdateMutation<Client>();
 
   const onSubmit = async (values: ClientFormValues) => {
+    // Ensure we have a team ID before proceeding
+    if (!teamId) {
+      toast({ 
+        title: "Error", 
+        description: "No team selected. Please try again or contact support.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     const mutationOptions = {
       onSuccess: () => {
         toast({ title: `Client ${isEditMode ? 'Updated' : 'Added'}`, description: `Client "${values.name}" has been successfully ${isEditMode ? 'updated' : 'added'}.` });
@@ -89,32 +99,42 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
     };
 
     if (isEditMode && data?.id) {
-       updateMutation.mutate(
-            {
-                collectionPath: collectionPath,
-                docId: data.id,
-                data: values,
-                invalidateQueryKeys: [clientsQueryKey],
-            },
-            mutationOptions
-        );
+      updateMutation.mutate(
+        {
+          collectionPath: collectionPath,
+          docId: data.id,
+          data: values,
+          invalidateQueryKeys: [clientsQueryKey!],
+        },
+        mutationOptions
+      );
     } else {
-        addMutation.mutate(
-            {
-                collectionPath: collectionPath,
-                data: values,
-                invalidateQueryKeys: [clientsQueryKey],
-            },
-            mutationOptions
-        );
+      addMutation.mutate(
+        {
+          collectionPath: collectionPath,
+          data: values,
+          invalidateQueryKeys: [clientsQueryKey!],
+        },
+        mutationOptions
+      );
     }
   };
 
-  const isLoading = addMutation.isPending || updateMutation.isPending;
+  const isLoading = addMutation.isPending || updateMutation.isPending || !teamId;
+
+  // Show a message if no team ID is available
+  if (!teamId) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-muted-foreground">Loading team information...</p>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" id="client-form">
+        {/* Form fields remain the same... */}
         <FormField
           control={form.control}
           name="name"
