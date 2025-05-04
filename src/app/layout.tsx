@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <QueryProvider> {/* Wrap with QueryProvider */}
           <SidebarProvider>
@@ -40,3 +40,4 @@ export default function RootLayout({
     </html>
   );
 }
+
