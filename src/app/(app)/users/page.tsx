@@ -65,6 +65,19 @@ export default function UsersPage() {
       return;
     }
 
+    // Check if the user being deleted is the last admin
+    const adminUsers = users?.filter(u => u.role === 'admin');
+    const userToDelete = users?.find(u => u.id === userId);
+
+    if (userToDelete?.role === 'admin' && adminUsers?.length === 1) {
+       toast({
+         title: "Action Prevented",
+         description: "Cannot remove the last admin from the team.",
+         variant: "destructive"
+       });
+       return;
+     }
+
     deleteMutation.mutate(
       {
         collectionPath: collectionPath,
@@ -109,6 +122,9 @@ export default function UsersPage() {
     try {
       // Ensure the user count is available, falling back to the fetched users length if needed
       const currentMemberCount = memberCount > 0 ? memberCount : users?.length || 1;
+      if (currentMemberCount === 0) {
+        throw new Error("Cannot create checkout session with zero members.");
+      }
 
       const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
       const result: any = await createCheckoutSession({ teamId: teamId, quantity: currentMemberCount });
@@ -125,11 +141,24 @@ export default function UsersPage() {
           toast({ title: "Checkout Error", description: error.message || "Failed to redirect to Stripe checkout.", variant: "destructive" });
         }
       } else {
+         // Check if there's a specific error message from the function
+         const functionError = result.data?.error;
+         if (functionError) {
+             throw new functions.https.HttpsError(functionError.code || 'internal', functionError.message || 'Invalid response from createCheckoutSession function.');
+         }
          throw new Error("Invalid response from createCheckoutSession function.");
       }
     } catch (error: any) {
-      console.error("Error creating checkout session:", error);
-       const message = error.message || "Failed to initiate checkout. Please try again.";
+       console.error("Error creating checkout session:", error);
+       // Handle HttpsError specifically
+       let message = "Failed to initiate checkout. Please try again.";
+       if (error instanceof functions.https.HttpsError) {
+            message = error.message;
+            // Handle specific error codes if needed
+            // if (error.code === 'failed-precondition') { ... }
+       } else if (error instanceof Error) {
+           message = error.message;
+       }
        setCheckoutError(message);
        toast({ title: "Checkout Error", description: message, variant: "destructive" });
     } finally {
@@ -213,6 +242,9 @@ export default function UsersPage() {
       cell: ({ row }) => {
         const user = row.original;
         const isCurrentUser = user.id === currentUser?.id;
+        const adminUsers = users?.filter(u => u.role === 'admin');
+        const canDelete = isAdmin && !isCurrentUser && !(user.role === 'admin' && adminUsers?.length === 1);
+
 
         return (
           <div className="flex justify-end">
@@ -237,21 +269,29 @@ export default function UsersPage() {
                     Edit User
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-                {isAdmin && !isCurrentUser && (
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => {
-                      const confirmed = confirm(`Are you sure you want to remove ${user.firstName} ${user.lastName} from the team? This action cannot be undone.`);
-                      if (confirmed) {
+                {/* Remove Separator if Edit User is not shown */}
+                {isAdmin && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  className={`focus:text-destructive ${canDelete ? 'text-destructive' : 'text-muted-foreground'}`}
+                  onClick={(e) => {
+                     if (!canDelete) {
+                        e.preventDefault(); // Prevent action if not allowed
+                        toast({
+                           title: "Action Prevented",
+                           description: "Cannot remove the last admin or yourself.",
+                           variant: "destructive"
+                        });
+                        return;
+                     }
+                     const confirmed = confirm(`Are you sure you want to remove ${user.firstName} ${user.lastName} from the team? This action cannot be undone.`);
+                     if (confirmed) {
                         handleDeleteUser(user.id);
-                      }
-                    }}
-                    disabled={!isAdmin || isCurrentUser}
-                  >
-                    Remove from Team
-                  </DropdownMenuItem>
-                )}
+                     }
+                  }}
+                  disabled={!canDelete} // Disable if not allowed
+                >
+                   Remove from Team
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -276,6 +316,7 @@ export default function UsersPage() {
             title="Team Users"
             formComponent={UserForm}
             addButtonText="Add Team Member"
+            addDialogDescription="Add a new user to your team. Ensure your subscription covers the new member."
           >
             {isPageLoading ? (
               <div className="space-y-4">
@@ -301,7 +342,7 @@ export default function UsersPage() {
             <CardHeader>
               <CardTitle>Team Subscription</CardTitle>
                <CardDescription>
-                   Manage your team's subscription plan.
+                   Manage your team's subscription plan. Price is calculated per member per month.
                </CardDescription>
             </CardHeader>
              <CardContent>
@@ -323,12 +364,12 @@ export default function UsersPage() {
                          <div className="flex justify-between items-center">
                            <span className="text-muted-foreground">Price:</span>
                            <span className="font-semibold">
-                               {team.planType === 'premium' ? `€${(6.99 * memberCount).toFixed(2)} / month` : 'Free'}
+                               {team.planType === 'premium' && memberCount > 0 ? `€${(6.99 * memberCount).toFixed(2)} / month` : 'Free'}
                            </span>
                         </div>
                         <div className="flex justify-between items-center">
                            <span className="text-muted-foreground">Status:</span>
-                           <Badge variant={team.subscriptionStatus === 'active' ? 'default' : team.subscriptionStatus === 'past_due' ? 'destructive' : 'outline'} className="capitalize text-sm">
+                           <Badge variant={team.subscriptionStatus === 'active' ? 'default' : (team.subscriptionStatus === 'past_due' || team.subscriptionStatus === 'incomplete') ? 'destructive' : 'outline'} className="capitalize text-sm">
                                 {team.subscriptionStatus || 'N/A'}
                            </Badge>
                         </div>
@@ -355,11 +396,11 @@ export default function UsersPage() {
                     ) : (
                         <Button
                             onClick={handleCheckout}
-                            disabled={isCheckoutLoading || !users || users.length === 0} // Disable if no users
+                            disabled={isCheckoutLoading || memberCount === 0} // Disable if no members
                             className="w-full"
                         >
                             {isCheckoutLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            {team.planType === 'premium' ? 'Retry Payment' : 'Upgrade to Premium'}
+                             {team.planType === 'premium' && (team.subscriptionStatus === 'past_due' || team.subscriptionStatus === 'incomplete') ? 'Retry Payment' : 'Upgrade to Premium'}
                         </Button>
                     )
                 )}
@@ -380,5 +421,3 @@ if (typeof window !== 'undefined') {
     console.log("Trigger edit for:", data);
   };
 }
-
-```

@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -232,4 +233,3 @@ export function useFirestoreBatchMutation() {
     },
   });
 }
-```
