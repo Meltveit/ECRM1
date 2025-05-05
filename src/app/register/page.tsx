@@ -1,7 +1,7 @@
 // src/app/register/page.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Import useEffect
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { TEAMS_COLLECTION, TEAM_USERS_SUBCOLLECTION } from '@/lib/constants';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 // Define the form schema
 const registerFormSchema = z.object({
@@ -40,7 +41,15 @@ type RegisterFormValues = z.infer<typeof registerFormSchema>;
 export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { user, loading } = useAuth(); // Get user and loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+   // Redirect if user is already logged in
+   useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
 
   // Initialize form
   const form = useForm<RegisterFormValues>({
@@ -93,15 +102,19 @@ export default function RegisterPage() {
         description: "Your account has been created. Redirecting to dashboard...",
       });
       
-      // Redirect to dashboard
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      // Redirect handled by useEffect now
+      // setTimeout(() => {
+      //   router.push('/dashboard');
+      // }, 1000);
       
     } catch (error: any) {
+      let errorMessage = "There was an error creating your account.";
+      if (error.code === 'auth/email-already-in-use') {
+          errorMessage = "This email address is already in use. Please log in or use a different email.";
+      }
       toast({
         title: "Registration failed",
-        description: error.message || "There was an error creating your account.",
+        description: errorMessage,
         variant: "destructive",
       });
       console.error("Registration error:", error);
@@ -110,8 +123,18 @@ export default function RegisterPage() {
     }
   };
 
+   // Don't render the form if loading or user is already logged in
+   if (loading || (!loading && user)) {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <p>Loading...</p> 
+        </div>
+    );
+   }
+
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-gray-50">
+    // Use flex flex-col items-center justify-center for centering
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md">
         <div className="flex justify-start mb-6">
           <Link href="/" className="text-primary hover:text-primary/80 flex items-center gap-1">
@@ -188,6 +211,9 @@ export default function RegisterPage() {
                       <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
+                       <FormDescription>
+                          Must be at least 8 characters long.
+                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

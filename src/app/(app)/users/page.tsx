@@ -1,11 +1,11 @@
-// src/app/users/page.tsx
+// src/app/(app)/users/page.tsx
 "use client";
 
 import React from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 
-import MainLayout from '@/components/main-layout';
+// Removed MainLayout import
 import { CrudPageLayout } from '@/components/crud-page-layout';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -171,38 +171,37 @@ export default function UsersPage() {
   ];
 
   if (error) {
-    return <MainLayout><div className="flex justify-center">Error loading team users: {error.message}</div></MainLayout>;
+    return <div className="flex justify-center">Error loading team users: {error.message}</div>;
   }
 
   // Show a loading state if waiting for team ID
   const isPageLoading = isLoading || !teamId;
 
   return (
-    <MainLayout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <CrudPageLayout<TeamUser> 
-          title="Team Users" 
-          formComponent={UserForm}
-          addButtonText="Add Team Member"
-        >
-          {isPageLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-40 w-full rounded-md border" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={users || []}
-              filterInputPlaceholder="Filter by email..."
-              filterColumnId="email"
-              onRowClick={isAdmin ? handleEditUser : undefined}
-            />
-          )}
-        </CrudPageLayout>
-      </div>
-    </MainLayout>
+    // MainLayout removed as it's handled by the layout
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <CrudPageLayout<TeamUser> 
+        title="Team Users" 
+        formComponent={UserForm}
+        addButtonText="Add Team Member"
+      >
+        {isPageLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-40 w-full rounded-md border" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={users || []}
+            filterInputPlaceholder="Filter by email..."
+            filterColumnId="email"
+            onRowClick={isAdmin ? handleEditUser : undefined}
+          />
+        )}
+      </CrudPageLayout>
+    </div>
   );
 }
 

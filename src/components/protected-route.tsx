@@ -2,19 +2,21 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname(); // Get current path
 
   useEffect(() => {
-    if (!loading && !user) {
+    // Redirect to login if not loading and no user, and not already on login page
+    if (!loading && !user && pathname !== '/login') {
       router.push('/login');
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, pathname]);
 
   if (loading) {
     return (
@@ -27,5 +29,6 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     );
   }
 
-  return user ? <>{children}</> : null;
+  // Render children only if user is authenticated
+  return user ? <>{children}</> : null; // Return null if not authenticated (or redirect will handle it)
 }

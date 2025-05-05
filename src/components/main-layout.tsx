@@ -12,7 +12,9 @@ import {
   Package,
   LogOut,
   Settings,
-  User as UserIcon 
+  User as UserIcon, // Renamed to avoid conflict with User type
+  GitBranch,
+  PanelLeft, // Import PanelLeft for the trigger
 } from 'lucide-react';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,13 +22,14 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarInset,
+  SidebarInset, // Use SidebarInset for main content area
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
+  SidebarTrigger, // Use SidebarTrigger
   SidebarFooter,
-  SidebarSeparator
+  SidebarSeparator,
+  useSidebar, // Import useSidebar hook
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,11 +42,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-// Updated menu items to include profile
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/users', label: 'Team Users', icon: Users },
   { href: '/clients', label: 'Clients', icon: Briefcase },
+  { href: '/clients/pipeline', label: 'Sales Pipeline', icon: GitBranch },
   { href: '/contacts', label: 'Contacts', icon: Phone },
   { href: '/activities', label: 'Activities', icon: ActivitySquare },
   { href: '/subscriptions', label: 'Subscriptions', icon: Package },
@@ -52,6 +55,7 @@ const menuItems = [
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, teamUser, signOut } = useAuth();
+  const { isMobile } = useSidebar(); // Get isMobile state
 
   // Get user initials for avatar
   const getInitials = () => {
@@ -62,8 +66,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar collapsible="icon">
+    // The outer div provided by SidebarProvider is handled in (app)/layout.tsx
+    <>
+      <Sidebar collapsible={isMobile ? "offcanvas" : "icon"}> {/* Use SidebarProvider settings */}
         <SidebarHeader className="p-4">
            <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg text-primary">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
@@ -71,7 +76,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 <path d="M2 17l10 5 10-5"/>
                 <path d="M2 12l10 5 10-5"/>
             </svg>
-            <span>ECRM</span>
+            {/* Text only shown when expanded */}
+            <span className="group-data-[state=expanded]:opacity-100 opacity-0 transition-opacity duration-200">ECRM</span>
            </Link>
         </SidebarHeader>
         <SidebarContent className="flex-1 p-2">
@@ -85,7 +91,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     tooltip={item.label}
                   >
                     <item.icon />
-                    <span>{item.label}</span>
+                    {/* Label only shown when expanded */}
+                     <span className="group-data-[state=expanded]:opacity-100 opacity-0 transition-opacity duration-200">{item.label}</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -101,7 +108,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   tooltip="Profile"
                 >
                   <UserIcon />
-                  <span>Profile</span>
+                  <span className="group-data-[state=expanded]:opacity-100 opacity-0 transition-opacity duration-200">Profile</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -115,7 +122,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 tooltip="Settings"
               >
                 <Settings />
-                <span>Settings</span>
+                <span className="group-data-[state=expanded]:opacity-100 opacity-0 transition-opacity duration-200">Settings</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -128,20 +135,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               variant="outline"
             >
               <LogOut />
-              <span>Sign Out</span>
+              <span className="group-data-[state=expanded]:opacity-100 opacity-0 transition-opacity duration-200">Sign Out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarFooter>
       </Sidebar>
 
+      {/* SidebarInset manages the main content area, adjusting its margin based on sidebar state */}
       <SidebarInset className="flex flex-col">
          <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 pt-2 pb-2">
-          {/* Header content */}
-          <div>
-            <SidebarTrigger className="md:hidden" />
-          </div>
+           {/* Hamburger menu trigger - shown on mobile and when sidebar is collapsed */}
+           <SidebarTrigger className="md:hidden" />
+           {/* Placeholder div to push user menu to the right */}
+           <div className="flex-grow"></div>
+           {/* User Menu */}
           <div className="flex items-center gap-4">
-            {/* User Menu - Keep this for quick access from header */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 rounded-full">
@@ -176,12 +184,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          {/* Remove max-width constraint to allow full width */}
+          {/* Ensure children take full width within the main area */}
           <div className="w-full">
             {children}
           </div>
         </main>
       </SidebarInset>
-    </div>
+    </>
   );
 }

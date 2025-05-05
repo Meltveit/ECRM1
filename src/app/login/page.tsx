@@ -1,7 +1,7 @@
 // src/app/login/page.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Import useEffect
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -23,6 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 // Define the login form schema
 const loginFormSchema = z.object({
@@ -35,7 +36,16 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { user, loading } = useAuth(); // Get user and loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
 
   // Initialize form
   const form = useForm<LoginFormValues>({
@@ -58,14 +68,14 @@ export default function LoginPage() {
         description: "You have been logged in successfully. Redirecting to dashboard...",
       });
       
-      // Redirect immediately to dashboard (no setTimeout)
-      router.push('/dashboard');
+      // Redirect immediately to dashboard (handled by useEffect now)
+      // router.push('/dashboard'); // Removed immediate redirect here
       
     } catch (error: any) {
       let errorMessage = "Failed to log in";
       
       // Parse Firebase error messages
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         errorMessage = "Invalid email or password";
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = "Too many failed login attempts. Please try again later.";
@@ -81,9 +91,20 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }
   };
+  
+  // Don't render the form if loading or user is already logged in (avoids flicker)
+   if (loading || (!loading && user)) {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            {/* Optional: Add a loading spinner */}
+            <p>Loading...</p> 
+        </div>
+    );
+   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-gray-50">
+    // Use flex flex-col items-center justify-center for centering
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md">
         <div className="flex justify-start mb-6">
           <Link href="/" className="text-primary hover:text-primary/80 flex items-center gap-1">

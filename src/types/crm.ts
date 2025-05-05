@@ -23,6 +23,7 @@ export interface Client extends BaseDoc {
   phone?: string;
   address?: string;
   description?: string; // For AI suggestions
+  pipelineStage?: string; // For sales pipeline tracking
 }
 
 export interface Contact extends BaseDoc {
@@ -38,8 +39,11 @@ export interface Activity extends BaseDoc {
   type: 'Call' | 'Meeting' | 'Email' | 'Note' | 'Task'; // Example activity types
   date: Timestamp;
   notes: string;
+  dueDate?: Timestamp;
+  userId?: string; // User who created the activity
+  userName?: string; // Name of the user who created the activity
+  completed?: boolean; // Whether the activity is completed
   pastInteractionSummary?: string; // For AI suggestions input
-  userId?: string; // User who performed the activity
 }
 
 export interface Subscription extends BaseDoc {

@@ -1,10 +1,11 @@
+// src/app/(app)/clients/page.tsx
 "use client";
 
 import React from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
 
-import MainLayout from '@/components/main-layout';
+// Removed MainLayout import
 import { CrudPageLayout } from '@/components/crud-page-layout';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -110,6 +111,14 @@ export default function ClientsPage() {
       cell: ({ row }) => row.getValue("address") || '-',
     },
     {
+        accessorKey: 'pipelineStage',
+        header: "Pipeline Stage",
+        cell: ({ row }) => {
+           const stage = row.getValue("pipelineStage") as string;
+           return stage ? <span className="capitalize">{stage}</span> : 'Lead'; // Default to 'Lead' if undefined
+        },
+    },
+    {
       id: 'actions',
       enableHiding: false,
       cell: ({ row }) => {
@@ -155,32 +164,31 @@ export default function ClientsPage() {
   ];
 
   if (error) {
-    return <MainLayout><div>Error loading clients: {error.message}</div></MainLayout>;
+    return <div>Error loading clients: {error.message}</div>;
   }
 
   // Show a loading state if waiting for team ID
   const isPageLoading = isLoading || !teamId;
 
   return (
-    <MainLayout>
-      <CrudPageLayout<Client> title="Clients" formComponent={ClientForm}>
-        {isPageLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-40 w-full rounded-md border" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : (
-          <DataTable
-            columns={columns}
-            data={clients || []}
-            filterInputPlaceholder="Filter by name..."
-            filterColumnId="name"
-            onRowClick={handleEditClient} // Pass the edit function using onRowClick prop
-          />
-        )}
-      </CrudPageLayout>
-    </MainLayout>
+    // MainLayout removed as it's handled by the layout
+    <CrudPageLayout<Client> title="Clients" formComponent={ClientForm}>
+      {isPageLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-40 w-full rounded-md border" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={clients || []}
+          filterInputPlaceholder="Filter by name..."
+          filterColumnId="name"
+          onRowClick={handleEditClient} // Pass the edit function using onRowClick prop
+        />
+      )}
+    </CrudPageLayout>
   );
 }
 
