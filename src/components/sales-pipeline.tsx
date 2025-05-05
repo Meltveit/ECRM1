@@ -22,8 +22,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { serverTimestamp } from 'firebase/firestore';
+import { serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query'; // Import useQueryClient
 
 // Define the expanded pipeline stages with colors
 const PIPELINE_STAGES: { id: PipelineStage; name: string; color: string; textColor: string }[] = [
@@ -38,6 +39,8 @@ const PIPELINE_STAGES: { id: PipelineStage; name: string; color: string; textCol
 export function SalesPipeline() {
   const { teamId, user, teamUser } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient(); // Add QueryClient
+  
   const [pipelineData, setPipelineData] = useState<{ [key in PipelineStage]: Client[] }>({
     lead: [], contact: [], proposal: [], negotiation: [], 'closed-won': [], 'closed-lost': []
   });
@@ -133,12 +136,15 @@ export function SalesPipeline() {
             return; // Don't proceed with immediate Firestore update yet
         } else {
              // Directly update for 'closed-lost'
-             updateData.closedAt = serverTimestamp();
-             updateData.assignedUserId = user?.uid;
-             updateData.assignedUserName = `${teamUser?.firstName || ''} ${teamUser?.lastName || ''}`.trim() || user?.email;
+             // FIX: Cast serverTimestamp() to unknown and then to Timestamp
+             updateData.closedAt = serverTimestamp() as unknown as Timestamp;
+             updateData.assignedUserId = user?.uid || undefined;
+             // FIX: Use empty string instead of null for assignedUserName
+             updateData.assignedUserName = `${teamUser?.firstName || ''} ${teamUser?.lastName || ''}`.trim() || user?.email || '';
         }
     } else if (destinationStageId === 'proposal' && !client.proposalSentAt) {
-        updateData.proposalSentAt = serverTimestamp();
+        // FIX: Cast serverTimestamp() to unknown and then to Timestamp
+        updateData.proposalSentAt = serverTimestamp() as unknown as Timestamp;
     }
 
     // Update Firestore (if not 'closed-won' requiring confirmation)
@@ -171,9 +177,11 @@ export function SalesPipeline() {
     const updateData: Partial<Client> = {
         pipelineStage: 'closed-won',
         value: numericValue,
-        closedAt: serverTimestamp(),
-        assignedUserId: user?.uid,
-        assignedUserName: `${teamUser?.firstName || ''} ${teamUser?.lastName || ''}`.trim() || user?.email,
+        // FIX: Cast serverTimestamp() to unknown and then to Timestamp
+        closedAt: serverTimestamp() as unknown as Timestamp,
+        assignedUserId: user?.uid || undefined,
+        // FIX: Use empty string instead of null for assignedUserName
+        assignedUserName: `${teamUser?.firstName || ''} ${teamUser?.lastName || ''}`.trim() || user?.email || '',
     };
 
     updateMutation.mutate({
@@ -193,10 +201,12 @@ export function SalesPipeline() {
             console.error("Failed to update client stage to closed-won:", error);
             toast({ title: "Update Failed", description: "Could not mark client as closed-won.", variant: "destructive" });
             // Revert optimistic update on error - this is tricky, might need full data refetch
-            queryClient.invalidateQueries({ queryKey: clientsQueryKey }); // Force refetch
+            if (clientsQueryKey) {
+              queryClient.invalidateQueries({ queryKey: clientsQueryKey }); // Force refetch
+            }
             setIsConfirmDialogOpen(false);
             setClientToUpdate(null);
-             setDealValue('');
+            setDealValue('');
         }
     });
   };
@@ -308,7 +318,9 @@ export function SalesPipeline() {
                         setIsConfirmDialogOpen(false);
                         setClientToUpdate(null);
                          // Revert optimistic update if canceled
-                         queryClient.invalidateQueries({ queryKey: clientsQueryKey! });
+                         if (clientsQueryKey) {
+                           queryClient.invalidateQueries({ queryKey: clientsQueryKey });
+                         }
                         }}>
                         Cancel
                     </Button>

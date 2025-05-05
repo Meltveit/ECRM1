@@ -30,7 +30,19 @@ const formatMonth = (monthKey: string): string => {
 
 // Format currency for Y-axis and Tooltip
 const formatCurrencyAxis = (value: number): string => `€${(value / 1000).toFixed(0)}k`; // Format as €10k, €20k etc.
-const formatCurrencyTooltip = (value: number): string => `€${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Modified formatter to handle ValueType from Recharts
+const formatCurrencyTooltip = (value: any): string => {
+  // Check if value is a number or can be converted to one
+  const numValue = typeof value === 'number' 
+    ? value 
+    : (typeof value === 'string' ? parseFloat(value) : 0);
+  
+  // Return formatted currency or fallback
+  return !isNaN(numValue) 
+    ? `€${numValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+    : `€0.00`;
+};
 
 const chartConfig = {
   totalValue: {

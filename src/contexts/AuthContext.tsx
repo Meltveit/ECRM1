@@ -1,4 +1,5 @@
-// src/contexts/AuthContext.tsx
+// src/contexts/AuthContext.fixed.tsx
+
 "use client";
 
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -166,7 +167,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, [router, pathname]);
 
-  // NEW IMPROVED METHOD - avoids trying to list all teams
+  // Improved method with the fixed field name (adminUserId instead of adminId)
   const findUserTeamsImproved = async (userId: string): Promise<string[]> => {
     const teamIds: string[] = [];
     
@@ -191,9 +192,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // If no team ID in storage or user is no longer a member, try finding teams
       // where the user is the admin (safer query)
       try {
+        // FIXED: Changed 'adminId' to 'adminUserId' to match Firestore field name
         const adminTeamsQuery = query(
           collection(db, TEAMS_COLLECTION),
-          where('adminId', '==', userId)
+          where('adminUserId', '==', userId)
         );
         
         const adminTeamsSnapshot = await getDocs(adminTeamsQuery);
