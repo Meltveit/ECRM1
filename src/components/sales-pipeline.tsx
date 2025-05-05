@@ -27,20 +27,20 @@ export function SalesPipeline() {
     negotiation: [],
     closed: []
   });
-  
+
   // Fetch clients
   const clientsQueryKey = teamId ? ['teams', teamId, CLIENTS_SUBCOLLECTION] : null;
   const collectionPath = teamId ? `${TEAMS_COLLECTION}/${teamId}/${CLIENTS_SUBCOLLECTION}` : '';
-  
+
   const { data: clients, isLoading } = useFirestoreCollection<Client>(
     collectionPath,
     clientsQueryKey || [],
     [],
     { enabled: !!teamId }
   );
-  
+
   const updateMutation = useFirestoreUpdateMutation<Client>();
-  
+
   // Process clients into pipeline stages
   React.useEffect(() => {
     if (clients) {
@@ -50,66 +50,84 @@ export function SalesPipeline() {
         negotiation: [],
         closed: []
       };
-      
+
       clients.forEach(client => {
         const stage = client.pipelineStage || 'lead';
         if (newPipelineData[stage]) {
           newPipelineData[stage].push(client);
         } else {
-          newPipelineData.lead.push(client);
+          newPipelineData.lead.push(client); // Default to lead if stage is unknown
         }
       });
-      
+
       setPipelineData(newPipelineData);
     }
   }, [clients]);
-  
+
   // Handle drag and drop between stages
   const handleDragEnd = (result: any) => {
     const { destination, source, draggableId } = result;
-    
+
     // If there's no destination or it's the same as source, do nothing
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
+    if (!destination ||
+        (destination.droppableId === source.droppableId &&
          destination.index === source.index)) {
       return;
     }
-    
+
     // Find the client that was dragged
-    const client = pipelineData[source.droppableId].find(c => c.id === draggableId);
+    const client = pipelineData[source.droppableId]?.find(c => c.id === draggableId);
     if (!client) return;
-    
+
     // Create a new state object
     const newPipelineData = { ...pipelineData };
-    
+
+    // Ensure source and destination columns exist
+    if (!newPipelineData[source.droppableId] || !newPipelineData[destination.droppableId]) {
+        console.error("Source or destination column not found in pipeline data");
+        return;
+    }
+
+
     // Remove from source
     newPipelineData[source.droppableId] = newPipelineData[source.droppableId]
       .filter(c => c.id !== draggableId);
-    
+
+    // Prepare the client object for the new stage
+    const updatedClient = { ...client, pipelineStage: destination.droppableId };
+
     // Add to destination
     newPipelineData[destination.droppableId] = [
       ...newPipelineData[destination.droppableId].slice(0, destination.index),
-      { ...client, pipelineStage: destination.droppableId },
+      updatedClient,
       ...newPipelineData[destination.droppableId].slice(destination.index)
     ];
-    
+
+    // Update local state optimistically
     setPipelineData(newPipelineData);
-    
+
     // Update in Firestore
-    if (teamId) {
+    if (teamId && clientsQueryKey) {
       updateMutation.mutate({
         collectionPath,
         docId: client.id,
         data: { pipelineStage: destination.droppableId },
-        invalidateQueryKeys: [clientsQueryKey!]
+        invalidateQueryKeys: [clientsQueryKey]
+      }, {
+        onError: (error) => {
+            console.error("Failed to update client stage:", error);
+            // Optionally: Revert state if update fails
+            // To revert, you would need to store the previous state
+            // or refetch the data. For simplicity, we just log the error here.
+        }
       });
     }
   };
-  
+
   if (isLoading) {
     return <div>Loading pipeline...</div>;
   }
-  
+
   return (
     <div className="w-full">
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -122,13 +140,13 @@ export function SalesPipeline() {
                   {pipelineData[stage.id]?.length || 0}
                 </Badge>
               </div>
-              
-              <Droppable droppableId={stage.id}>
+
+              <Droppable droppableId={stage.id} isDropDisabled={false}>
                 {(provided) => (
-                  <div 
+                  <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="bg-gray-50 rounded-b-md flex-grow min-h-[400px] p-2"
+                    className="bg-gray-100 dark:bg-gray-800 rounded-b-md flex-grow min-h-[400px] p-2" // Adjusted background color
                   >
                     {pipelineData[stage.id]?.map((client, index) => (
                       <Draggable key={client.id} draggableId={client.id} index={index}>
@@ -139,9 +157,9 @@ export function SalesPipeline() {
                             {...provided.dragHandleProps}
                             className="mb-2"
                           >
-                            <Card className="shadow-sm hover:shadow-md transition-shadow">
+                            <Card className="shadow-sm hover:shadow-md transition-shadow bg-card"> {/* Ensure card uses theme background */}
                               <CardContent className="p-3">
-                                <div className="font-medium">{client.name}</div>
+                                <div className="font-medium text-card-foreground">{client.name}</div>
                                 <div className="text-sm text-muted-foreground truncate">
                                   {client.email || 'No email'}
                                 </div>
