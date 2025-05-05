@@ -17,6 +17,7 @@ export interface TeamUser extends BaseDoc {
   lastName: string;
   email: string;
   role: 'admin' | 'member'; // Example roles
+  lastLogin?: Timestamp; // Add lastLogin
 }
 
 export interface Client extends BaseDoc {
@@ -25,7 +26,7 @@ export interface Client extends BaseDoc {
   phone?: string;
   address?: string;
   description?: string; // For AI suggestions
-  pipelineStage?: string; // For sales pipeline tracking
+  pipelineStage?: 'lead' | 'contact' | 'negotiation' | 'closed'; // Use specific stages
 }
 
 export interface Contact extends BaseDoc {
@@ -51,15 +52,24 @@ export interface Activity extends BaseDoc {
 export interface Subscription extends BaseDoc {
   clientId?: string; // Optional: Link to a specific client
   planName: string;
-  status: 'active' | 'inactive' | 'trial' | 'cancelled';
+  status: 'active' | 'inactive' | 'trial' | 'cancelled' | 'past_due'; // Added past_due
   startDate: Timestamp;
-  endDate?: Timestamp;
-  price?: number;
+  endDate?: Timestamp | null; // Allow null
+  price?: number; // Optional price field
+  // Add fields relevant from Stripe if needed, e.g., stripeSubscriptionId
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  currentPeriodEnd?: Timestamp;
 }
+
 
 export interface Team extends BaseDoc {
   name: string;
   adminUserId: string; // ID of the user who created/administers the team
+  planType?: 'free' | 'premium' | 'enterprise'; // Add plan type
+  clientCount?: number; // Add client count
+  stripeCustomerId?: string; // Stripe customer ID for billing
+  subscriptionStatus?: Subscription['status']; // Reflects the overall team subscription status
 }
 
 // Input type for AI suggestions, combining necessary client/activity info
