@@ -223,7 +223,8 @@ export default function DashboardPage() {
                 </div>
                 <div>
                     <span className="text-sm font-medium text-muted-foreground">Type:</span>
-                    <p><Badge variant="outline">{selectedActivity.type}</Badge></p>
+                    {/* Change the parent <p> to <div> to fix nesting issue */}
+                    <div><Badge variant="outline">{selectedActivity.type}</Badge></div>
                 </div>
                 {selectedActivity.dueDate && (
                    <div>
