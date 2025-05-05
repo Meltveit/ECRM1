@@ -29,8 +29,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/* Removed suppressHydrationWarning from body, keep on html */}
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      {/* Add suppressHydrationWarning to body as well, as extensions might modify it */}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider> {/* AuthProvider wraps everything */}
             {/* SidebarProvider removed from here */}

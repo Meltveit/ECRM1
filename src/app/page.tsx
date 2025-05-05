@@ -1,10 +1,20 @@
 // src/app/page.tsx
+"use client"; // Ensure this is a Client Component for useEffect
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CheckCircle, BarChart3, Users, Calendar, Target } from 'lucide-react';
 import { ImageWithFallback } from '@/components/ui/image-with-fallback';
+import { useState, useEffect } from 'react'; // Import useState and useEffect
 
 export default function LandingPage() {
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Set the year only on the client side after mount
+    setCurrentYear(new Date().getFullYear());
+  }, []);
+
   return (
     // Removed min-h-screen flex flex-col from root div, let children handle height
     <div>
@@ -407,7 +417,8 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-gray-400 flex flex-col md:flex-row justify-between items-center">
-            <p>© {new Date().getFullYear()} ECRM. All rights reserved.</p> {/* Use dynamic year */}
+            {/* Show placeholder while year is loading */}
+            <p>© {currentYear !== null ? currentYear : '...'} ECRM. All rights reserved.</p>
             <div className="flex gap-4 mt-4 md:mt-0">
               {/* Replace with actual links */}
               <Link href="#" className="hover:text-white transition">Twitter</Link>
