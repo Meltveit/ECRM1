@@ -3,13 +3,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Home, 
-  Users, 
-  Briefcase, 
-  Phone, 
-  ActivitySquare, 
-  Package,
+import {
+  Home,
+  Users,
+  Briefcase,
+  Phone,
+  ActivitySquare,
+  // Package, // Removed Subscriptions icon
   LogOut,
   Settings,
   User as UserIcon, // Renamed to avoid conflict with User type
@@ -44,12 +44,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/users', label: 'Team Users', icon: Users },
+  { href: '/users', label: 'Team & Billing', icon: Users }, // Updated label
   { href: '/clients', label: 'Clients', icon: Briefcase },
   { href: '/clients/pipeline', label: 'Sales Pipeline', icon: GitBranch },
   { href: '/contacts', label: 'Contacts', icon: Phone },
   { href: '/activities', label: 'Activities', icon: ActivitySquare },
-  { href: '/subscriptions', label: 'Subscriptions', icon: Package },
+  // { href: '/subscriptions', label: 'Subscriptions', icon: Package }, // Removed Subscriptions link
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -97,9 +97,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 </Link>
               </SidebarMenuItem>
             ))}
-            
+
             <SidebarSeparator className="my-2" />
-            
+
             {/* Profile link */}
             <SidebarMenuItem>
               <Link href="/profile" passHref legacyBehavior>
@@ -126,7 +126,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
-          
+
           {/* Sign out button */}
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -193,3 +193,4 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     </>
   );
 }
+```

@@ -49,6 +49,7 @@ export interface Activity extends BaseDoc {
   pastInteractionSummary?: string; // For AI suggestions input
 }
 
+// Represents a subscription *linked* to a client, not the team's main subscription
 export interface Subscription extends BaseDoc {
   clientId?: string; // Optional: Link to a specific client
   planName: string;
@@ -65,11 +66,12 @@ export interface Subscription extends BaseDoc {
 
 export interface Team extends BaseDoc {
   name: string;
-  adminUserId: string; // ID of the user who created/administers the team
-  planType?: 'free' | 'premium' | 'enterprise'; // Add plan type
-  clientCount?: number; // Add client count
-  stripeCustomerId?: string; // Stripe customer ID for billing
-  subscriptionStatus?: Subscription['status']; // Reflects the overall team subscription status
+  adminId: string; // ID of the user who created/administers the team
+  planType?: 'free' | 'premium'; // Simplified plan types for now
+  clientCount?: number; // Example counter, maybe replace with member count logic later
+  subscriptionStatus?: 'active' | 'canceled' | 'incomplete' | 'past_due' | 'trialing'; // Reflects the team's subscription status
+  stripeCustomerId?: string; // Stripe customer ID associated with the admin user paying for the team
+  stripeSubscriptionId?: string; // Stripe subscription ID for the team's plan
 }
 
 // Input type for AI suggestions, combining necessary client/activity info
@@ -78,3 +80,5 @@ export interface AISuggestionInput {
     clientDescription: string;
     pastInteractions: string;
 }
+
+```

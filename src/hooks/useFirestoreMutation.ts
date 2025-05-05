@@ -11,10 +11,15 @@ import {
   CollectionReference,
   DocumentReference,
   Timestamp,
+  getCountFromServer
 } from 'firebase/firestore';
 import { useMutation, useQueryClient, MutateOptions, QueryKey } from '@tanstack/react-query';
-import { db } from '@/lib/firebase';
-import type { BaseDoc } from '@/types/crm';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { db, functions as firebaseFunctions } from '@/lib/firebase';
+import type { BaseDoc, Team } from '@/types/crm';
+import { TEAMS_COLLECTION, TEAM_USERS_SUBCOLLECTION } from '@/lib/constants';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth to access team info
+import { useToast } from './use-toast'; // Import useToast for notifications
 
 type OptionalTimestamps<T> = Omit<T, 'createdAt' | 'updatedAt'> & {
   createdAt?: Timestamp;
@@ -31,6 +36,7 @@ interface AddMutationParams<T> {
 
 export function useFirestoreAddMutation<T extends BaseDoc>() {
   const queryClient = useQueryClient();
+  const { teamId } = useAuth(); // Get teamId for potential Stripe update check
 
   return useMutation<DocumentReference, Error, AddMutationParams<T>>({
     mutationFn: async ({ collectionPath, data }) => {
@@ -43,15 +49,14 @@ export function useFirestoreAddMutation<T extends BaseDoc>() {
       };
       return await addDoc(collRef, dataWithTimestamp);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (docRef, variables) => {
       // Invalidate relevant queries after successful addition
       if (variables.invalidateQueryKeys) {
         variables.invalidateQueryKeys.forEach(key => {
           queryClient.invalidateQueries({ queryKey: key });
         });
       }
-      // Optionally, you could update the cache directly here for faster UI updates
-      // Example: queryClient.setQueryData([...], (oldData) => [...oldData, { id: data.id, ...variables.data }])
+      // No direct Stripe update here, handled in UserForm after adding a user
     },
     onError: (error) => {
       console.error("Error adding document: ", error);
@@ -110,13 +115,57 @@ interface DeleteMutationParams {
 
 export function useFirestoreDeleteMutation() {
   const queryClient = useQueryClient();
+  const { team, teamId } = useAuth(); // Get team info for Stripe check
+  const { toast } = useToast();
+
+    // Function to update Stripe subscription quantity
+    const updateStripeQuantity = async (newQuantity: number) => {
+        if (!teamId || !team || team.planType !== 'premium' || !team.stripeSubscriptionId) {
+            console.log("Skipping Stripe quantity update (not premium or no subscription ID)");
+            return; // Only update for premium teams with a subscription ID
+        }
+
+        try {
+            const updateSubscriptionQuantity = httpsCallable(firebaseFunctions, 'updateSubscriptionQuantity');
+            await updateSubscriptionQuantity({ teamId: teamId, quantity: newQuantity });
+            toast({
+                title: "Subscription Updated",
+                description: `Team size updated to ${newQuantity} members.`,
+            });
+        } catch (error: any) {
+            console.error("Error updating Stripe quantity:", error);
+            toast({
+                title: "Stripe Update Error",
+                description: `Failed to update subscription quantity: ${error.message}. Please check billing manually.`,
+                variant: "destructive",
+            });
+        }
+    };
+
 
   return useMutation<void, Error, DeleteMutationParams>({
     mutationFn: async ({ collectionPath, docId }) => {
       const docRef = doc(db, collectionPath, docId);
       await deleteDoc(docRef);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
+      // Check if the deleted item was a team user to potentially update Stripe
+      const isTeamUserDeletion = variables.collectionPath.endsWith(TEAM_USERS_SUBCOLLECTION) && teamId && variables.collectionPath.includes(teamId);
+
+      if (isTeamUserDeletion) {
+          // Fetch the new member count *after* deletion
+          try {
+             const membersCollectionRef = collection(db, `${TEAMS_COLLECTION}/${teamId}/${TEAM_USERS_SUBCOLLECTION}`);
+             const countSnapshot = await getCountFromServer(membersCollectionRef);
+             const newMemberCount = countSnapshot.data().count;
+             await updateStripeQuantity(newMemberCount);
+          } catch (error) {
+              console.error("Error fetching member count after deletion:", error);
+              toast({ title: "Warning", description: "Could not verify member count after deletion. Please check billing.", variant: "destructive" });
+          }
+      }
+
+      // Invalidate queries after potential Stripe update
       if (variables.invalidateQueryKeys) {
         variables.invalidateQueryKeys.forEach(key => {
           queryClient.invalidateQueries({ queryKey: key });
@@ -124,8 +173,6 @@ export function useFirestoreDeleteMutation() {
            queryClient.removeQueries({ queryKey: [...(key ?? []), variables.docId]});
         });
       }
-      // Optimistic delete example:
-      // queryClient.setQueryData(['items'], (oldData) => oldData?.filter(item => item.id !== variables.docId));
     },
      onError: (error, variables) => {
       console.error(`Error deleting document ${variables.docId}: `, error);
@@ -185,3 +232,4 @@ export function useFirestoreBatchMutation() {
     },
   });
 }
+```
