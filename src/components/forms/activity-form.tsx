@@ -46,19 +46,19 @@ export function ActivityForm({ data, clients, onSave, onCancel }: ActivityFormPr
     e.preventDefault();
     
     if (!teamId || !user) {
-      toast({ 
-        title: "Error", 
-        description: "You must be logged in to save activities", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: "You must be logged in to save activities",
+        variant: "destructive"
       });
       return;
     }
     
     if (!clientId) {
-      toast({ 
-        title: "Missing Client", 
-        description: "Please select a client for this activity", 
-        variant: "destructive" 
+      toast({
+        title: "Missing Client",
+        description: "Please select a client for this activity",
+        variant: "destructive"
       });
       return;
     }
@@ -87,8 +87,8 @@ export function ActivityForm({ data, clients, onSave, onCancel }: ActivityFormPr
           invalidateQueryKeys: [activitiesQueryKey!],
         });
         
-        toast({ 
-          title: "Activity Updated", 
+        toast({
+          title: "Activity Updated",
           description: "The activity has been updated successfully"
         });
       } else {
@@ -99,18 +99,18 @@ export function ActivityForm({ data, clients, onSave, onCancel }: ActivityFormPr
           invalidateQueryKeys: [activitiesQueryKey!],
         });
         
-        toast({ 
-          title: "Activity Added", 
+        toast({
+          title: "Activity Added",
           description: "The activity has been added successfully"
         });
       }
       
       onSave();
     } catch (error: any) {
-      toast({ 
-        title: "Error", 
-        description: error.message || "There was an error saving the activity", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error.message || "There was an error saving the activity",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
@@ -126,7 +126,7 @@ export function ActivityForm({ data, clients, onSave, onCancel }: ActivityFormPr
                     <SelectValue placeholder="Select client..." />
                 </SelectTrigger>
                 <SelectContent>
-                     <SelectItem value="" disabled>Select a client...</SelectItem>
+                     {/* Removed the SelectItem with value="" */}
                      {clients.map(client => (
                          <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                      ))}
@@ -205,14 +205,14 @@ export function ActivityForm({ data, clients, onSave, onCancel }: ActivityFormPr
        
       <div>
         <Label htmlFor="notes">Notes / Summary *</Label>
-        <Textarea 
-          id="notes" 
-          placeholder="Log details about the activity..." 
-          rows={6} 
+        <Textarea
+          id="notes"
+          placeholder="Log details about the activity..."
+          rows={6}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           disabled={isSubmitting}
-          required 
+          required
         />
       </div>
 
@@ -221,8 +221,8 @@ export function ActivityForm({ data, clients, onSave, onCancel }: ActivityFormPr
               Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting 
-                ? (data ? 'Saving Changes...' : 'Logging Activity...') 
+              {isSubmitting
+                ? (data ? 'Saving Changes...' : 'Logging Activity...')
                 : (data ? 'Save Changes' : 'Log Activity')}
           </Button>
        </div>
