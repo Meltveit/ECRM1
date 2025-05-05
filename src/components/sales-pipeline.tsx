@@ -1,8 +1,8 @@
 // src/components/sales-pipeline.tsx
 "use client";
 
-import React, { useState } from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import React, { useState, useEffect } from 'react'; // Import useEffect
+import { DragDropContext, Droppable, Draggable, DropResult, DragStart } from 'react-beautiful-dnd'; // Import DragStart
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useFirestoreCollection } from '@/hooks/useFirestoreQuery';
@@ -28,6 +28,7 @@ export function SalesPipeline() {
     negotiation: [],
     closed: []
   });
+  const [isDragging, setIsDragging] = useState(false); // State to track drag status
 
   // Fetch clients
   const clientsQueryKey = teamId ? ['teams', teamId, CLIENTS_SUBCOLLECTION] : null;
@@ -43,36 +44,45 @@ export function SalesPipeline() {
   const updateMutation = useFirestoreUpdateMutation<Client>();
 
   // Process clients into pipeline stages
-  React.useEffect(() => {
-    if (clients) {
-      const newPipelineData: { [key: string]: Client[] } = PIPELINE_STAGES.reduce((acc, stage) => {
-        acc[stage.id] = [];
-        return acc;
-      }, {} as { [key: string]: Client[] });
+  // Prevent updates while dragging
+  useEffect(() => {
+    if (isLoading || isDragging || !clients) return; // Prevent updates while loading or dragging
+
+    const newPipelineData: { [key: string]: Client[] } = PIPELINE_STAGES.reduce((acc, stage) => {
+      acc[stage.id] = [];
+      return acc;
+    }, {} as { [key: string]: Client[] });
 
 
-      clients.forEach(client => {
-        const stage = client.pipelineStage && newPipelineData.hasOwnProperty(client.pipelineStage)
-                      ? client.pipelineStage
-                      : 'lead'; // Default to lead if stage is missing or invalid
-         // Sort clients within each stage if needed, e.g., by name
-         // newPipelineData[stage].sort((a, b) => a.name.localeCompare(b.name));
-         newPipelineData[stage].push(client);
-      });
+    clients.forEach(client => {
+      const stage = client.pipelineStage && newPipelineData.hasOwnProperty(client.pipelineStage)
+                    ? client.pipelineStage
+                    : 'lead'; // Default to lead if stage is missing or invalid
+       // Sort clients within each stage if needed, e.g., by name
+       // newPipelineData[stage].sort((a, b) => a.name.localeCompare(b.name));
+       newPipelineData[stage].push(client);
+    });
 
 
-      // Sort each stage by name (or other criteria if needed)
-      Object.keys(newPipelineData).forEach(stageId => {
-        newPipelineData[stageId].sort((a, b) => a.name.localeCompare(b.name));
-      });
+    // Sort each stage by name (or other criteria if needed)
+    Object.keys(newPipelineData).forEach(stageId => {
+      newPipelineData[stageId].sort((a, b) => a.name.localeCompare(b.name));
+    });
 
 
-      setPipelineData(newPipelineData);
-    }
-  }, [clients]);
+    setPipelineData(newPipelineData);
+  }, [clients, isLoading, isDragging]); // Add isDragging dependency
+
+  // Handle drag start
+  const handleDragStart = (start: DragStart) => {
+    setIsDragging(true);
+  };
+
 
   // Handle drag and drop between stages
   const handleDragEnd = (result: DropResult) => {
+    setIsDragging(false); // Reset dragging state first
+
     const { destination, source, draggableId } = result;
 
     // If there's no destination or it's the same as source, do nothing
@@ -158,7 +168,8 @@ export function SalesPipeline() {
 
   return (
     <div className="w-full">
-      <DragDropContext onDragEnd={handleDragEnd}>
+      {/* Add onDragStart handler */}
+      <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start"> {/* Use items-start */}
           {PIPELINE_STAGES.map(stage => (
             <div key={stage.id} className="flex flex-col h-full"> {/* Ensure columns take full height */}
