@@ -28,7 +28,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function ActivitiesPage() {
   const { toast } = useToast();
   const { teamId } = useAuth();
-  
+
   // States for AI suggestions
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [pastInteractions, setPastInteractions] = useState<string>('');
@@ -39,7 +39,7 @@ export default function ActivitiesPage() {
   // Query keys and collection paths
   const clientsQueryKey = teamId ? ['teams', teamId, CLIENTS_SUBCOLLECTION] : null;
   const clientsPath = teamId ? `${TEAMS_COLLECTION}/${teamId}/${CLIENTS_SUBCOLLECTION}` : '';
-  
+
   const activitiesQueryKey = teamId ? ['teams', teamId, ACTIVITIES_SUBCOLLECTION] : null;
   const activitiesPath = teamId ? `${TEAMS_COLLECTION}/${teamId}/${ACTIVITIES_SUBCOLLECTION}` : '';
 
@@ -74,19 +74,19 @@ export default function ActivitiesPage() {
   // Handle getting AI suggestions
   const handleGetSuggestions = async () => {
     if (!selectedClientId || !pastInteractions) {
-      toast({ 
-        title: "Missing Information", 
-        description: "Please select a client and provide past interaction details.", 
-        variant: "destructive" 
+      toast({
+        title: "Missing Information",
+        description: "Please select a client and provide past interaction details.",
+        variant: "destructive"
       });
       return;
     }
-    
+
     if (!selectedClient) {
-      toast({ 
-        title: "Client Data Missing", 
-        description: "Could not retrieve client details for suggestions.", 
-        variant: "destructive" 
+      toast({
+        title: "Client Data Missing",
+        description: "Could not retrieve client details for suggestions.",
+        variant: "destructive"
       });
       return;
     }
@@ -103,26 +103,26 @@ export default function ActivitiesPage() {
       };
 
       const result = await suggestClientActivities(input);
-      
+
       if (result && result.suggestedActivities && result.suggestedActivities.length > 0) {
         setSuggestions(result.suggestedActivities);
-        toast({ 
-          title: "Suggestions Generated", 
-          description: `Found ${result.suggestedActivities.length} suggestions.` 
+        toast({
+          title: "Suggestions Generated",
+          description: `Found ${result.suggestedActivities.length} suggestions.`
         });
       } else {
-        toast({ 
-          title: "No Suggestions", 
-          description: "The AI couldn't generate suggestions based on the input.", 
-          variant: "default" 
+        toast({
+          title: "No Suggestions",
+          description: "The AI couldn't generate suggestions based on the input.",
+          variant: "default"
         });
       }
     } catch (error: any) {
       console.error("Error getting AI suggestions:", error);
-      toast({ 
-        title: "AI Error", 
-        description: `Failed to get suggestions: ${error.message}`, 
-        variant: "destructive" 
+      toast({
+        title: "AI Error",
+        description: `Failed to get suggestions: ${error.message}`,
+        variant: "destructive"
       });
     } finally {
       setIsLoadingSuggestions(false);
@@ -210,10 +210,10 @@ export default function ActivitiesPage() {
         const activity = row.original;
         const handleDelete = () => {
           if (!teamId) return;
-          
+
           const confirmed = confirm('Are you sure you want to delete this activity?');
           if (!confirmed) return;
-          
+
           deleteMutation.mutate({
             collectionPath: activitiesPath,
             docId: activity.id,
@@ -223,15 +223,15 @@ export default function ActivitiesPage() {
               toast({ title: "Activity Deleted", description: "The activity has been deleted successfully" });
             },
             onError: (error) => {
-              toast({ 
-                title: "Error Deleting Activity", 
-                description: error.message, 
-                variant: "destructive" 
+              toast({
+                title: "Error Deleting Activity",
+                description: error.message,
+                variant: "destructive"
               });
             },
           });
         };
-        
+
         return (
           <Button variant="ghost" size="sm" onClick={handleDelete}>
             <MoreHorizontal className="h-4 w-4" />
@@ -295,8 +295,8 @@ export default function ActivitiesPage() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="client-select">Select Client</Label>
-              <Select 
-                value={selectedClientId} 
+              <Select
+                value={selectedClientId}
                 onValueChange={setSelectedClientId}
                 disabled={isLoadingSuggestions || isLoadingClients}
               >
@@ -304,14 +304,14 @@ export default function ActivitiesPage() {
                   <SelectValue placeholder="Select a client..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" disabled>Select a client...</SelectItem>
+                  {/* Removed the SelectItem with value="" */}
                   {clients?.map(client => (
                     <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label htmlFor="past-interactions">Past Interaction Summary</Label>
               <Textarea
@@ -346,7 +346,7 @@ export default function ActivitiesPage() {
                 <Skeleton className="h-4 w-full" />
               </div>
             )}
-            
+
             {!isLoadingSuggestions && suggestions.length > 0 && (
               <div className="mt-4 space-y-2 rounded-md border p-4 bg-secondary/50">
                 <h4 className="font-semibold text-sm mb-2">Suggested Activities:</h4>
@@ -357,9 +357,9 @@ export default function ActivitiesPage() {
                 </ul>
               </div>
             )}
-            
-            {!isLoadingSuggestions && suggestions.length === 0 && 
-              pastInteractions && selectedClientId && (
+
+            {!isLoadingSuggestions && suggestions.length === 0 &&
+              pastInteractions && selectedClientId && !isLoadingSuggestions && ( // Added check for isLoadingSuggestions to avoid flash
               <p className="text-sm text-muted-foreground mt-4 text-center">
                 No suggestions generated yet. Click "Get Suggestions" to generate some.
               </p>
