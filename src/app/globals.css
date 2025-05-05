@@ -34,15 +34,15 @@ body {
     --chart-5: 0 84% 60%; /* Red */
     --radius: 0.5rem;
 
-    /* Sidebar specific variables - Adjusting slightly for contrast */
-    --sidebar-background: 210 15% 98%; /* Very Light Blue-Gray */
-    --sidebar-foreground: 210 40% 20%; /* Darker Blue-Gray */
+    /* Sidebar specific variables - Slightly darker than main background */
+    --sidebar-background: 210 15% 97%; /* Slightly darker Light Blue-Gray */
+    --sidebar-foreground: 210 40% 15%; /* Darker Blue-Gray text */
     --sidebar-primary: 210 80% 50%; /* Blue */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 210 15% 92%; /* Slightly darker Light Blue-Gray */
-    --sidebar-accent-foreground: 210 80% 50%; /* Blue */
-    --sidebar-border: 210 15% 85%; /* Slightly darker Light Gray */
-    --sidebar-ring: 210 80% 50%; /* Blue */
+    --sidebar-accent: 210 15% 90%; /* Slightly darker hover */
+    --sidebar-accent-foreground: 210 80% 50%; /* Blue for active/hover text */
+    --sidebar-border: 210 15% 85%; /* Slightly darker border */
+    --sidebar-ring: 210 80% 50%; /* Blue ring */
   }
 
   .dark {
@@ -72,14 +72,15 @@ body {
     --chart-4: 280 65% 65%; /* Lighter Purple */
     --chart-5: 0 70% 50%; /* Slightly less intense Red */
 
-    --sidebar-background: 210 20% 8%; /* Very Dark Blue */
-    --sidebar-foreground: 0 0% 95%; /* Light Gray */
+    /* Sidebar specific variables - Slightly lighter than main dark background */
+    --sidebar-background: 210 20% 12%; /* Slightly lighter Dark Blue */
+    --sidebar-foreground: 0 0% 95%; /* Light Gray text */
     --sidebar-primary: 210 80% 60%; /* Lighter Blue */
     --sidebar-primary-foreground: 210 20% 5%; /* Very Dark Blue */
-    --sidebar-accent: 210 15% 20%; /* Slightly Lighter Dark Gray-Blue */
-    --sidebar-accent-foreground: 210 80% 60%; /* Lighter Blue */
-    --sidebar-border: 210 15% 25%; /* Dark Gray */
-    --sidebar-ring: 210 80% 60%; /* Lighter Blue */
+    --sidebar-accent: 210 15% 22%; /* Slightly lighter hover */
+    --sidebar-accent-foreground: 210 80% 65%; /* Brighter Lighter Blue for active/hover text */
+    --sidebar-border: 210 15% 30%; /* Slightly lighter dark border */
+    --sidebar-ring: 210 80% 60%; /* Lighter Blue ring */
   }
 }
 
