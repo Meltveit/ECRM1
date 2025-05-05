@@ -8,6 +8,8 @@ export interface BaseDoc {
   id: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  // Add any other common fields if necessary
+  [key: string]: any; // Allow for other fields not explicitly defined
 }
 
 export interface TeamUser extends BaseDoc {
