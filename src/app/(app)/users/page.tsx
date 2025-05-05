@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { functions } from '@/lib/firebase'; // Import configured functions instance
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog'; // Import confirmation dialog
 
 // Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
@@ -144,19 +145,23 @@ export default function UsersPage() {
          // Check if there's a specific error message from the function
          const functionError = result.data?.error;
          if (functionError) {
-             throw new functions.https.HttpsError(functionError.code || 'internal', functionError.message || 'Invalid response from createCheckoutSession function.');
+             // Re-throw a generic error with the message from the function
+             throw new Error(functionError.message || 'Invalid response from createCheckoutSession function.');
          }
          throw new Error("Invalid response from createCheckoutSession function.");
       }
     } catch (error: any) {
        console.error("Error creating checkout session:", error);
-       // Handle HttpsError specifically
+       // Check if the error has a 'code' property, typical of HttpsError from callable functions
        let message = "Failed to initiate checkout. Please try again.";
-       if (error instanceof functions.https.HttpsError) {
+       if (error && typeof error.code === 'string' && typeof error.message === 'string') {
+            // It looks like an HttpsError
             message = error.message;
             // Handle specific error codes if needed
             // if (error.code === 'failed-precondition') { ... }
+            // if (error.code === 'unauthenticated') { ... }
        } else if (error instanceof Error) {
+           // Standard JavaScript error
            message = error.message;
        }
        setCheckoutError(message);
@@ -192,7 +197,13 @@ export default function UsersPage() {
 
         } catch (error: any) {
              console.error("Error creating portal link:", error);
-             const message = error.message || "Failed to open subscription management portal.";
+             // Check if the error looks like an HttpsError
+             let message = "Failed to open subscription management portal.";
+             if (error && typeof error.code === 'string' && typeof error.message === 'string') {
+                  message = error.message;
+             } else if (error instanceof Error) {
+                  message = error.message;
+             }
              setCheckoutError(message);
              toast({ title: "Portal Error", description: message, variant: "destructive" });
         } finally {
@@ -271,27 +282,40 @@ export default function UsersPage() {
                 )}
                 {/* Remove Separator if Edit User is not shown */}
                 {isAdmin && <DropdownMenuSeparator />}
-                <DropdownMenuItem
-                  className={`focus:text-destructive ${canDelete ? 'text-destructive' : 'text-muted-foreground'}`}
-                  onClick={(e) => {
-                     if (!canDelete) {
-                        e.preventDefault(); // Prevent action if not allowed
-                        toast({
-                           title: "Action Prevented",
-                           description: "Cannot remove the last admin or yourself.",
-                           variant: "destructive"
-                        });
-                        return;
-                     }
-                     const confirmed = confirm(`Are you sure you want to remove ${user.firstName} ${user.lastName} from the team? This action cannot be undone.`);
-                     if (confirmed) {
-                        handleDeleteUser(user.id);
-                     }
-                  }}
-                  disabled={!canDelete} // Disable if not allowed
-                >
-                   Remove from Team
-                </DropdownMenuItem>
+                 <DropdownMenuItem
+                    className={`focus:text-destructive ${canDelete ? 'text-destructive' : 'text-muted-foreground'}`}
+                    onClick={(e) => {
+                       if (!canDelete) {
+                            e.stopPropagation(); // Prevent triggering row click if disabled
+                            toast({
+                               title: "Action Prevented",
+                               description: "Cannot remove the last admin or yourself.",
+                               variant: "destructive"
+                            });
+                            return;
+                         }
+                         // No need for confirm here, DeleteConfirmationDialog handles it
+                    }}
+                     onSelect={(e) => {
+                        if (!canDelete) e.preventDefault(); // Prevent menu closing if disabled
+                     }}
+                    disabled={!canDelete} // Disable if not allowed
+                    asChild // Use asChild for the confirmation dialog trigger
+                 >
+                     <DeleteConfirmationDialog
+                        onConfirm={() => handleDeleteUser(user.id)}
+                        triggerText="Remove from Team"
+                        triggerVariant="ghost" // Match dropdown item style
+                        triggerClassName="w-full justify-start relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-destructive focus:text-destructive h-auto" // Mimic DropdownMenuItem styles
+                        triggerSize="sm"
+                        dialogTitle={`Remove ${user.firstName} ${user.lastName}?`}
+                        dialogDescription="Are you sure you want to remove this user from the team? This action cannot be undone."
+                        isLoading={deleteMutation.isPending}
+                    >
+                        {/* Override the default button trigger */}
+                        <span className="w-full">Remove from Team</span>
+                    </DeleteConfirmationDialog>
+                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -369,7 +393,7 @@ export default function UsersPage() {
                         </div>
                         <div className="flex justify-between items-center">
                            <span className="text-muted-foreground">Status:</span>
-                           <Badge variant={team.subscriptionStatus === 'active' ? 'default' : (team.subscriptionStatus === 'past_due' || team.subscriptionStatus === 'incomplete') ? 'destructive' : 'outline'} className="capitalize text-sm">
+                           <Badge variant={team.subscriptionStatus === 'active' ? 'success' : (team.subscriptionStatus === 'past_due' || team.subscriptionStatus === 'incomplete') ? 'destructive' : 'outline'} className="capitalize text-sm">
                                 {team.subscriptionStatus || 'N/A'}
                            </Badge>
                         </div>
