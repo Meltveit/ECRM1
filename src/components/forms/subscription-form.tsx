@@ -164,7 +164,7 @@ export function SubscriptionForm({ data, clients, onSave, onCancel }: Subscripti
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  {/* <SelectItem value="">None</SelectItem>  Removed this line to fix the error */}
                   {clients.map(client => (
                     <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
                   ))}
@@ -320,6 +320,81 @@ export function SubscriptionForm({ data, clients, onSave, onCancel }: Subscripti
             )}
             />
        </div>
+        
+        {/* Stripe Fields (optional inputs) */}
+        <FormField
+          control={form.control}
+          name="stripeSubscriptionId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Stripe Subscription ID (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="sub_..." {...field} disabled={isLoading} />
+              </FormControl>
+               <FormDescription>
+                 If managed via Stripe, enter the subscription ID here.
+               </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="stripePriceId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Stripe Price ID (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="price_..." {...field} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+         <FormField
+            control={form.control}
+            name="currentPeriodEnd"
+            render={({ field }) => (
+                <FormItem className="flex flex-col">
+                <FormLabel>Current Period End (Optional)</FormLabel>
+                <Popover>
+                    <PopoverTrigger asChild>
+                    <FormControl>
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                        )}
+                        disabled={isLoading}
+                        >
+                        {field.value ? (
+                            format(field.value, "PPP")
+                        ) : (
+                            <span>Set current billing period end</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                    </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => field.onChange(date || undefined)} // Handle undefined date as null
+                        disabled={isLoading}
+                    />
+                    </PopoverContent>
+                </Popover>
+                 <FormDescription>
+                 Optional: Useful if syncing with Stripe or another billing system.
+               </FormDescription>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
@@ -333,3 +408,5 @@ export function SubscriptionForm({ data, clients, onSave, onCancel }: Subscripti
     </Form>
   );
 }
+
+    
