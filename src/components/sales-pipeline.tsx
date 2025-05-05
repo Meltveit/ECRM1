@@ -141,7 +141,7 @@ export function SalesPipeline() {
                 </Badge>
               </div>
 
-              <Droppable droppableId={stage.id} isDropDisabled={false}>
+              <Droppable droppableId={stage.id} isDropDisabled={false} isCombineEnabled={false}>
                 {(provided) => (
                   <div
                     ref={provided.innerRef}
@@ -180,3 +180,4 @@ export function SalesPipeline() {
     </div>
   );
 }
+
