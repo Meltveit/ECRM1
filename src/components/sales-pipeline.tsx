@@ -29,6 +29,12 @@ export function SalesPipeline() {
     closed: []
   });
   const [isDragging, setIsDragging] = useState(false); // State to track drag status
+  const [isClient, setIsClient] = useState(false); // State to track client-side mount
+
+  // Ensure DragDropContext only renders client-side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Fetch clients
   const clientsQueryKey = teamId ? ['teams', teamId, CLIENTS_SUBCOLLECTION] : null;
@@ -58,8 +64,6 @@ export function SalesPipeline() {
       const stage = client.pipelineStage && newPipelineData.hasOwnProperty(client.pipelineStage)
                     ? client.pipelineStage
                     : 'lead'; // Default to lead if stage is missing or invalid
-       // Sort clients within each stage if needed, e.g., by name
-       // newPipelineData[stage].sort((a, b) => a.name.localeCompare(b.name));
        newPipelineData[stage].push(client);
     });
 
@@ -143,8 +147,8 @@ export function SalesPipeline() {
     }
   };
 
-  // Loading Skeleton
-  if (isLoading || !teamId) {
+  // Loading Skeleton or initial render placeholder
+  if (isLoading || !teamId || !isClient) {
     return (
       <div className="w-full">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -168,7 +172,7 @@ export function SalesPipeline() {
 
   return (
     <div className="w-full">
-      {/* Add onDragStart handler */}
+      {/* Render DragDropContext only on client-side after mount */}
       <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start"> {/* Use items-start */}
           {PIPELINE_STAGES.map(stage => (
@@ -186,7 +190,7 @@ export function SalesPipeline() {
                   droppableId={stage.id}
                   isDropDisabled={false}
                   isCombineEnabled={false}
-                  ignoreContainerClipping={false} // Added missing prop
+                  ignoreContainerClipping={false}
               >
                 {(provided, snapshot) => (
                   <div
