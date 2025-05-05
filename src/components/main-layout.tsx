@@ -142,7 +142,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </Sidebar>
 
       {/* SidebarInset manages the main content area, adjusting its margin based on sidebar state */}
-      <SidebarInset className="flex flex-col">
+      <SidebarInset className="flex flex-col min-h-screen"> {/* Added min-h-screen */}
          <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 pt-2 pb-2">
            {/* Hamburger menu trigger - shown on mobile and when sidebar is collapsed */}
            <SidebarTrigger className="md:hidden" />
@@ -193,4 +193,3 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     </>
   );
 }
-```

@@ -33,8 +33,11 @@ if (isBrowser && !getApps().length) {
   db = getFirestore(app);
   auth = getAuth(app);
   functions = getFunctions(app); // Get existing Functions instance
+} else {
+  // Handle server-side initialization or cases where Firebase is not needed
+  // Depending on your needs, you might initialize admin SDK here
+  // or simply leave these variables undefined/null for server environments.
 }
 
 // Export initialized instances
 export { app, db, auth, functions };
-```
