@@ -2,15 +2,15 @@
 import MainLayout from '@/components/main-layout';
 import ProtectedRoute from '@/components/protected-route';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import AuthTokenRefresher from '@/components/auth-token-refresher';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
-       {/* SidebarProvider wraps the layout for authenticated routes */}
+      <AuthTokenRefresher /> {/* Add this line */}
       <SidebarProvider>
-        {/* MainLayout provides the consistent structure with sidebar and content area */}
         <MainLayout>
-            {children}
+          {children}
         </MainLayout>
       </SidebarProvider>
     </ProtectedRoute>

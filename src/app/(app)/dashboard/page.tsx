@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { SalesChart } from '@/components/sales-chart'; // Import SalesChart
+import DebugFirebaseAuth from '@/components/debug-firebase-auth'; // Import the debug component
 
 export default function DashboardPage() {
   const { teamId } = useAuth();
@@ -78,7 +79,7 @@ export default function DashboardPage() {
       setLoadingStats(true);
       try {
          // Fetch counts in parallel
-          const [usersCountSnap, clientsCountSnap, contactsCountSnap, activitiesCountSnap, subscriptionsCountSnap] = await Promise.all([
+          const [usersCountSnap, clientsCountSnap, contactsCountSnap, activitiesCountSnap] = await Promise.all([
               getCountFromServer(collection(db, `${TEAMS_COLLECTION}/${teamId}/${TEAM_USERS_SUBCOLLECTION}`)),
               getCountFromServer(collection(db, `${TEAMS_COLLECTION}/${teamId}/${CLIENTS_SUBCOLLECTION}`)),
               getCountFromServer(collection(db, `${TEAMS_COLLECTION}/${teamId}/${CONTACTS_SUBCOLLECTION}`)),
@@ -154,7 +155,7 @@ export default function DashboardPage() {
     <div className="container mx-auto py-6">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5"> {/* Adjusted grid columns */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"> {/* Adjusted grid columns */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Won Value</CardTitle>
@@ -329,6 +330,9 @@ export default function DashboardPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Add the debug component in development mode */}
+      {process.env.NODE_ENV !== 'production' && <DebugFirebaseAuth />}
     </div>
   );
 }
