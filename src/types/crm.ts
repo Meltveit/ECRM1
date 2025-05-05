@@ -20,13 +20,21 @@ export interface TeamUser extends BaseDoc {
   lastLogin?: Timestamp; // Add lastLogin
 }
 
+// Expanded pipeline stages for sales tracking
+export type PipelineStage = 'lead' | 'contact' | 'proposal' | 'negotiation' | 'closed-won' | 'closed-lost';
+
 export interface Client extends BaseDoc {
   name: string;
   email?: string;
   phone?: string;
   address?: string;
   description?: string; // For AI suggestions
-  pipelineStage?: 'lead' | 'contact' | 'negotiation' | 'closed'; // Use specific stages
+  pipelineStage?: PipelineStage; // Use specific stages
+  value?: number; // Deal value
+  closedAt?: Timestamp | null; // When the deal was closed (won or lost)
+  proposalSentAt?: Timestamp | null; // When a proposal was sent
+  assignedUserId?: string; // User ID of the sales rep who closed the deal
+  assignedUserName?: string; // Name of the sales rep
 }
 
 export interface Contact extends BaseDoc {
@@ -72,6 +80,7 @@ export interface Team extends BaseDoc {
   subscriptionStatus?: 'active' | 'canceled' | 'incomplete' | 'past_due' | 'trialing'; // Reflects the team's subscription status
   stripeCustomerId?: string; // Stripe customer ID associated with the admin user paying for the team
   stripeSubscriptionId?: string; // Stripe subscription ID for the team's plan
+  adminEmail?: string; // Store admin email for Stripe
 }
 
 // Input type for AI suggestions, combining necessary client/activity info
@@ -81,4 +90,8 @@ export interface AISuggestionInput {
     pastInteractions: string;
 }
 
-```
+// Type for sales data aggregated by month
+export interface MonthlySalesData {
+    month: string; // e.g., "2024-01"
+    totalValue: number;
+}

@@ -1,3 +1,4 @@
+// src/components/forms/client-form.tsx
 "use client";
 
 import React, { useEffect } from 'react';
@@ -16,35 +17,43 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
 import { useFirestoreAddMutation, useFirestoreUpdateMutation } from '@/hooks/useFirestoreMutation';
-import type { Client } from '@/types/crm';
+import type { Client, PipelineStage } from '@/types/crm'; // Import PipelineStage type
 import { TEAMS_COLLECTION, CLIENTS_SUBCOLLECTION } from '@/lib/constants';
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth hook
+import { useAuth } from '@/contexts/AuthContext';
 
-// Define Zod schema for validation
+// Define available pipeline stages for the form select
+const pipelineStages: PipelineStage[] = ['lead', 'contact', 'proposal', 'negotiation', 'closed-won', 'closed-lost'];
+
+// Define Zod schema for validation, including new fields
 const clientFormSchema = z.object({
   name: z.string().min(2, { message: "Client name must be at least 2 characters." }),
-  email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')), // Allow empty string
+  email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
   phone: z.string().optional(),
   address: z.string().optional(),
   description: z.string().optional(),
+  value: z.preprocess( // Preprocess to convert empty string to undefined, then validate number
+      (val) => (val === "" || val === null ? undefined : Number(val)),
+      z.number().positive({ message: "Value must be a positive number." }).optional()
+  ),
+  pipelineStage: z.enum(pipelineStages),
 });
 
 type ClientFormValues = z.infer<typeof clientFormSchema>;
 
 interface ClientFormProps {
-  data?: Client | null; // Data for editing, null/undefined for adding
+  data?: Client | null;
   onSave: () => void;
   onCancel: () => void;
 }
 
 export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
   const { toast } = useToast();
-  const { teamId } = useAuth(); // Get the actual team ID from auth context
+  const { teamId } = useAuth();
   const isEditMode = !!data;
 
-  // Define the query key for clients - using the actual team ID
   const clientsQueryKey = teamId ? ['teams', teamId, CLIENTS_SUBCOLLECTION] : null;
   const collectionPath = teamId ? `${TEAMS_COLLECTION}/${teamId}/${CLIENTS_SUBCOLLECTION}` : '';
 
@@ -56,11 +65,13 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
       phone: '',
       address: '',
       description: '',
+      value: undefined, // Initialize value as undefined
+      pipelineStage: 'lead', // Default to 'lead' for new clients
       ...data, // Populate form with existing data if editing
+      value: data?.value ?? undefined, // Ensure value is number or undefined
     },
   });
 
-  // Reset form when `data` changes (e.g., when opening the dialog for add/edit)
   useEffect(() => {
     form.reset({
       name: '',
@@ -68,7 +79,10 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
       phone: '',
       address: '',
       description: '',
-      ...data, // Use new data or defaults
+      value: undefined,
+      pipelineStage: 'lead',
+      ...data,
+      value: data?.value ?? undefined,
     });
   }, [data, form]);
 
@@ -76,21 +90,16 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
   const updateMutation = useFirestoreUpdateMutation<Client>();
 
   const onSubmit = async (values: ClientFormValues) => {
-    // Ensure we have a team ID before proceeding
     if (!teamId) {
-      toast({ 
-        title: "Error", 
-        description: "No team selected. Please try again or contact support.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Error", description: "No team selected.", variant: "destructive" });
       return;
     }
 
     const mutationOptions = {
       onSuccess: () => {
         toast({ title: `Client ${isEditMode ? 'Updated' : 'Added'}`, description: `Client "${values.name}" has been successfully ${isEditMode ? 'updated' : 'added'}.` });
-        form.reset(); // Reset form after successful submission
-        onSave(); // Call the onSave callback (e.g., close dialog)
+        form.reset();
+        onSave();
       },
       onError: (error: Error) => {
         toast({ title: `Error ${isEditMode ? 'Updating' : 'Adding'} Client`, description: error.message, variant: "destructive" });
@@ -98,21 +107,28 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
       },
     };
 
+    // Prepare data, ensuring value is stored as a number or null/undefined
+    const dataToSave = {
+      ...values,
+      value: values.value !== undefined ? Number(values.value) : null, // Store as number or null
+    };
+
     if (isEditMode && data?.id) {
       updateMutation.mutate(
         {
           collectionPath: collectionPath,
           docId: data.id,
-          data: values,
+          data: dataToSave,
           invalidateQueryKeys: [clientsQueryKey!],
         },
         mutationOptions
       );
     } else {
+        // If adding, ensure pipelineStage is set (default is 'lead')
       addMutation.mutate(
         {
           collectionPath: collectionPath,
-          data: values,
+          data: dataToSave,
           invalidateQueryKeys: [clientsQueryKey!],
         },
         mutationOptions
@@ -122,7 +138,6 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
 
   const isLoading = addMutation.isPending || updateMutation.isPending || !teamId;
 
-  // Show a message if no team ID is available
   if (!teamId) {
     return (
       <div className="p-4 text-center">
@@ -133,8 +148,7 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" id="client-form">
-        {/* Form fields remain the same... */}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" id="client-form">
         <FormField
           control={form.control}
           name="name"
@@ -148,6 +162,34 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
             </FormItem>
           )}
         />
+
+        {/* Pipeline Stage Select */}
+        <FormField
+            control={form.control}
+            name="pipelineStage"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Pipeline Stage *</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <FormControl>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select pipeline stage..." />
+                    </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                    {pipelineStages.map(stage => (
+                        <SelectItem key={stage} value={stage} className="capitalize">
+                            {/* Improve display text */}
+                            {stage.replace('-', ' ')}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+        />
+
         <FormField
           control={form.control}
           name="email"
@@ -164,7 +206,8 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
             </FormItem>
           )}
         />
-         <FormField
+
+        <FormField
           control={form.control}
           name="phone"
           render={({ field }) => (
@@ -177,6 +220,26 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
             </FormItem>
           )}
         />
+
+        {/* Deal Value Input */}
+        <FormField
+          control={form.control}
+          name="value"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Deal Value (€)</FormLabel>
+              <FormControl>
+                 {/* Use field.value directly, which should be number or undefined */}
+                <Input type="number" placeholder="e.g., 5000" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} min="0" step="0.01" disabled={isLoading} />
+              </FormControl>
+              <FormDescription>
+                Optional: Estimated or final value of the deal.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
          <FormField
           control={form.control}
           name="address"
@@ -190,6 +253,7 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
             </FormItem>
           )}
         />
+
          <FormField
           control={form.control}
           name="description"
@@ -197,7 +261,7 @@ export function ClientForm({ data, onSave, onCancel }: ClientFormProps) {
             <FormItem>
               <FormLabel>Description / Notes</FormLabel>
               <FormControl>
-                <Textarea placeholder="Optional: Notes about the client, industry, needs, etc. Used for AI suggestions." {...field} rows={4} disabled={isLoading}/>
+                <Textarea placeholder="Optional: Notes about the client, industry, needs, etc. Used for AI suggestions." {...field} rows={3} disabled={isLoading}/>
               </FormControl>
               <FormDescription>
                 Provide some context about the client for better AI activity suggestions.

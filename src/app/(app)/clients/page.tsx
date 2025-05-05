@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { MoreHorizontal, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, ArrowUpDown, DollarSign, User, CheckCircle, XCircle, FileText, Handshake, Hourglass, ChevronsRight } from 'lucide-react'; // Added icons
 
 // Removed MainLayout import
 import { CrudPageLayout } from '@/components/crud-page-layout';
@@ -20,20 +20,39 @@ import {
 import { ClientForm } from '@/components/forms/client-form';
 import { useFirestoreCollection } from '@/hooks/useFirestoreQuery';
 import { useFirestoreDeleteMutation } from '@/hooks/useFirestoreMutation';
-import type { Client } from '@/types/crm';
+import type { Client, PipelineStage } from '@/types/crm'; // Import PipelineStage
 import { TEAMS_COLLECTION, CLIENTS_SUBCOLLECTION } from '@/lib/constants';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge'; // Import Badge
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
+
+// Helper to format currency
+const formatCurrency = (value?: number) => {
+  if (value === undefined || value === null) return '-';
+  return `€${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+// Map stages to icons and text
+const stageDisplay: Record<PipelineStage, { icon: React.ElementType, text: string, colorClass: string }> = {
+    'lead': { icon: ChevronsRight, text: 'Lead', colorClass: 'text-gray-500' },
+    'contact': { icon: Handshake, text: 'Contact Made', colorClass: 'text-blue-500' },
+    'proposal': { icon: FileText, text: 'Proposal Sent', colorClass: 'text-purple-500' },
+    'negotiation': { icon: Hourglass, text: 'Negotiation', colorClass: 'text-orange-500' },
+    'closed-won': { icon: CheckCircle, text: 'Won', colorClass: 'text-green-600' },
+    'closed-lost': { icon: XCircle, text: 'Lost', colorClass: 'text-red-600' },
+};
+
 
 export default function ClientsPage() {
   const { toast } = useToast();
   const { teamId } = useAuth();
-  
+
   // Define the query key and collection path with the actual team ID
   const clientsQueryKey = teamId ? ['teams', teamId, CLIENTS_SUBCOLLECTION] : null;
   const collectionPath = teamId ? `${TEAMS_COLLECTION}/${teamId}/${CLIENTS_SUBCOLLECTION}` : '';
-  
+
   const { data: clients, isLoading, error } = useFirestoreCollection<Client>(
     collectionPath,
     clientsQueryKey || [],
@@ -45,14 +64,14 @@ export default function ClientsPage() {
 
   const handleDeleteClient = (clientId: string) => {
     if (!teamId) {
-      toast({ 
-        title: "Error", 
-        description: "No team selected. Please try again or contact support.", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: "No team selected. Please try again or contact support.",
+        variant: "destructive"
       });
       return;
     }
-    
+
     deleteMutation.mutate(
       {
         collectionPath: collectionPath,
@@ -99,24 +118,50 @@ export default function ClientsPage() {
     {
       accessorKey: 'email',
       header: "Email",
-    },
-    {
-      accessorKey: 'phone',
-      header: 'Phone',
-      cell: ({ row }) => row.getValue("phone") || '-',
-    },
-    {
-      accessorKey: 'address',
-      header: 'Address',
-      cell: ({ row }) => row.getValue("address") || '-',
+       cell: ({ row }) => row.getValue("email") || '-',
     },
     {
         accessorKey: 'pipelineStage',
         header: "Pipeline Stage",
         cell: ({ row }) => {
-           const stage = row.getValue("pipelineStage") as string;
-           return stage ? <span className="capitalize">{stage}</span> : 'Lead'; // Default to 'Lead' if undefined
+           const stage = row.getValue("pipelineStage") as PipelineStage || 'lead';
+           const displayInfo = stageDisplay[stage];
+           return displayInfo ? (
+                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${displayInfo.colorClass}`}>
+                    <displayInfo.icon className="h-3.5 w-3.5"/>
+                    {displayInfo.text}
+                </span>
+           ) : 'Lead';
         },
+    },
+    {
+        accessorKey: 'value',
+        header: ({ column }) => (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="justify-end w-full" // Align header text right
+            >
+                Value
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+        ),
+        cell: ({ row }) => (
+            <div className="text-right font-medium flex items-center justify-end gap-1">
+                <DollarSign className="h-3.5 w-3.5 text-muted-foreground"/>
+                {formatCurrency(row.getValue("value"))}
+            </div>
+        ),
+    },
+    {
+        accessorKey: 'assignedUserName',
+        header: "Assigned To",
+        cell: ({ row }) => (
+            <div className="flex items-center gap-1">
+                <User className="h-3.5 w-3.5 text-muted-foreground"/>
+                {row.getValue("assignedUserName") || '-'}
+            </div>
+        ),
     },
     {
       id: 'actions',
@@ -143,18 +188,26 @@ export default function ClientsPage() {
                   Edit Client
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => {
-                    // Show a confirmation dialog before deleting
-                    const confirmed = confirm(`Are you sure you want to delete client "${client.name}"? This action cannot be undone.`);
-                    if (confirmed) {
-                      handleDeleteClient(client.id);
-                    }
-                  }}
-                >
-                  Delete Client
-                </DropdownMenuItem>
+                 <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={(e) => e.stopPropagation()} // Prevent row click
+                    onSelect={(e) => e.preventDefault()} // Prevent menu close
+                    asChild
+                 >
+                     <DeleteConfirmationDialog
+                        onConfirm={() => handleDeleteClient(client.id)}
+                        triggerText="Delete Client"
+                        triggerVariant="ghost"
+                        triggerSize="sm"
+                        triggerClassName="w-full justify-start relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:text-destructive focus:bg-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-50 h-auto" // mimic item style
+                        dialogTitle={`Delete ${client.name}?`}
+                        dialogDescription="Are you sure? This action cannot be undone."
+                        isLoading={deleteMutation.isPending}
+                      >
+                         {/* Override default button */}
+                         <span className="w-full">Delete Client</span>
+                     </DeleteConfirmationDialog>
+                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -171,24 +224,30 @@ export default function ClientsPage() {
   const isPageLoading = isLoading || !teamId;
 
   return (
-    // MainLayout removed as it's handled by the layout
-    <CrudPageLayout<Client> title="Clients" formComponent={ClientForm}>
-      {isPageLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-40 w-full rounded-md border" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : (
-        <DataTable
-          columns={columns}
-          data={clients || []}
-          filterInputPlaceholder="Filter by name..."
-          filterColumnId="name"
-          onRowClick={handleEditClient} // Pass the edit function using onRowClick prop
-        />
-      )}
-    </CrudPageLayout>
+    // Use container and py-6 for consistent padding
+    <div className="container mx-auto py-6">
+        <CrudPageLayout<Client>
+            title="Clients"
+            formComponent={(props) => <ClientForm {...props} />} // Pass props to ClientForm
+            addDialogDescription="Add a new potential client or lead."
+        >
+        {isPageLoading ? (
+            <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-40 w-full rounded-md border" />
+            <Skeleton className="h-10 w-full" />
+            </div>
+        ) : (
+            <DataTable
+            columns={columns}
+            data={clients || []}
+            filterInputPlaceholder="Filter by name..."
+            filterColumnId="name"
+            onRowClick={handleEditClient} // Pass the edit function using onRowClick prop
+            />
+        )}
+        </CrudPageLayout>
+    </div>
   );
 }
 

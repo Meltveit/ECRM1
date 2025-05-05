@@ -9,7 +9,7 @@ import {
   Briefcase,
   Phone,
   ActivitySquare,
-  // Package, // Removed Subscriptions icon
+  DollarSign, // Added Sales icon
   LogOut,
   Settings,
   User as UserIcon, // Renamed to avoid conflict with User type
@@ -49,7 +49,7 @@ const menuItems = [
   { href: '/clients/pipeline', label: 'Sales Pipeline', icon: GitBranch },
   { href: '/contacts', label: 'Contacts', icon: Phone },
   { href: '/activities', label: 'Activities', icon: ActivitySquare },
-  // { href: '/subscriptions', label: 'Subscriptions', icon: Package }, // Removed Subscriptions link
+  { href: '/sales', label: 'Sales', icon: DollarSign }, // Added Sales link
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
